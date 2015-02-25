@@ -1,15 +1,17 @@
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from flask import (Blueprint, render_template, current_app, abort, g,
     request, url_for, session, flash, redirect)
 from galatea.tryton import tryton
-from galatea.utils import get_tryton_language
+# from galatea.utils import get_tryton_language
 from flask.ext.paginate import Pagination
 from flask.ext.babel import gettext as _, lazy_gettext
 from flask.ext.mail import Mail, Message
-from trytond.config import config as tryton_config
+# from trytond.config import config as tryton_config
 from trytond.transaction import Transaction
-from whoosh import index
-from whoosh.qparser import MultifieldParser
-import os
+# from whoosh import index
+# from whoosh.qparser import MultifieldParser
+# import os
 
 blog = Blueprint('blog', __name__, template_folder='templates')
 
@@ -315,10 +317,10 @@ def _visibility():
 #             breadcrumbs=breadcrumbs,
 #             )
 
-@blog.route("/", endpoint="posts")
+@blog.route("/", endpoint="home")
 @tryton.transaction()
-def posts():
-    '''Posts'''
+def home():
+    '''Blog home'''
     # TODO: get it from website conf?
     with Transaction().set_context(website=GALATEA_WEBSITE):
         uris = Uri.search([
@@ -331,29 +333,112 @@ def posts():
         abort(404)
     uri = uris[0]
 
+    posts, pagination = paginated_posts()
+    return render_template('blog.html',
+        uri=uri,
+        posts=posts,
+        pagination=pagination)
+
+
+@blog.route("/<path:uri_str>", endpoint="archives")
+@tryton.transaction()
+def archives(uri_str):
+    '''Blog Archives'''
+    websites = Website.search([
+        ('id', '=', GALATEA_WEBSITE),
+        ], limit=1)
+    if not websites:
+        abort(404)
+    website, = websites
+
+    # TODO: get it from some "blog" attribute?
+    blog_base_uri_str = url_for('.home')
+    tags_base_uri = website.tags_base_uri
+    archives_base_uri = website.archives_base_uri
+
+    current_uri_str = blog_base_uri_str + uri_str
+    if current_uri_str.startswith(tags_base_uri.uri):
+        with Transaction().set_context(website=GALATEA_WEBSITE):
+            uris = Uri.search([
+                ('uri', '=', current_uri_str[1:]),
+                ('active', '=', True),
+                ('website', '=', GALATEA_WEBSITE),
+                ])
+        if not uris:
+            abort(404)
+
+        posts, pagination = paginated_posts(tag=uris[0].content)
+        return render_template(uris[0].template.filename,
+            uri=uris[0],
+            posts=posts,
+            pagination=pagination)
+
+    if current_uri_str.startswith(archives_base_uri.uri):
+        archive_params = current_uri_str.replace(archives_base_uri.uri,
+            '').split('/')[1:]
+        if not archive_params[-1]:  # current_uri_str ends with '/'
+            archive_params = archive_params[:-1]
+
+        if len(archive_params) == 2:
+            try:
+                year, month = map(int, archive_params)
+            except ValueError:
+                abort(404)
+
+            title = '{:0>2}/{}'.format(month, year)
+            start_date = datetime(year, month, 1, 0, 0, 0)
+            end_date = start_date + relativedelta(months=+1)
+        elif len(archive_params) == 1:
+            try:
+                year = int(archive_params[0])
+            except ValueError:
+                abort(404)
+
+            title = year
+            start_date = datetime(year, 1, 1, 0, 0, 0)
+            end_date = datetime(year + 1, 1, 1, 0, 0, 0)
+        else:
+            abort(404)
+
+        posts, pagination = paginated_posts(start_date=start_date,
+            end_date=end_date)
+        return render_template('blog-archive.html',
+            title=title,
+            posts=posts,
+            pagination=pagination)
+    else:
+        abort(404)
+
+
+def paginated_posts(tag=None, start_date=None, end_date=None, offset=None,
+        limit=None):
     try:
         page = int(request.args.get('page', 1))
     except ValueError:
         page = 1
+
+    if limit is None:
+        limit = LIMIT
+    if offset is None:
+        offset = (page - 1) * limit
 
     domain = [
         ('active', '=', True),
         ('visibility', 'in', _visibility()),
         ('websites', 'in', [GALATEA_WEBSITE]),
         ]
-    total = Post.search_count(domain)
-    offset = (page-1)*LIMIT
+    if tag:
+        domain.append(('tags', 'in', [tag.id]))
+    if start_date:
+        domain.append(('post_create_date', '>=', start_date))
+    if end_date:
+        domain.append(('post_create_date', '<', end_date))
 
-    print "offset=%s, limit=%s" % (offset, LIMIT)
+    total = Post.search_count(domain)
     posts = Post.search(domain, offset=offset, limit=LIMIT, order=[
             ('post_create_date', 'DESC'),
             ('id', 'DESC'),
             ])
-    pagination = Pagination(page=page, total=total, per_page=LIMIT,
+    pagination = Pagination(page=page, total=total, per_page=limit,
         display_msg=DISPLAY_MSG, bs_version='3')
-
-    return render_template('blog.html',
-        uri=uri,
-        posts=posts,
-        pagination=pagination,
-        )
+    return posts, pagination

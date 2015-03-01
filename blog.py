@@ -13,6 +13,9 @@ from trytond.transaction import Transaction
 # from whoosh.qparser import MultifieldParser
 # import os
 
+import galatea
+
+
 blog = Blueprint('blog', __name__, template_folder='templates')
 
 DISPLAY_MSG = lazy_gettext('Displaying <b>{start} - {end}</b> of <b>{total}</b>')
@@ -357,21 +360,23 @@ def archives(uri_str):
     archives_base_uri = website.archives_base_uri
 
     current_uri_str = blog_base_uri_str + uri_str
-    if current_uri_str.startswith(tags_base_uri.uri):
-        with Transaction().set_context(website=GALATEA_WEBSITE):
-            uris = Uri.search([
-                ('uri', '=', current_uri_str[1:]),
-                ('active', '=', True),
-                ('website', '=', GALATEA_WEBSITE),
-                ])
-        if not uris:
-            abort(404)
+    with Transaction().set_context(website=GALATEA_WEBSITE):
+        uris = Uri.search([
+            ('uri', '=', current_uri_str[1:]),
+            ('active', '=', True),
+            ('website', '=', GALATEA_WEBSITE),
+            ])
 
-        posts, pagination = paginated_posts(tag=uris[0].content)
-        return render_template(uris[0].template.filename,
-            uri=uris[0],
-            posts=posts,
-            pagination=pagination)
+    if uris:
+        if current_uri_str.startswith(tags_base_uri.uri):
+            posts, pagination = paginated_posts(tag=uris[0].content)
+            return render_template(uris[0].template.filename,
+                uri=uris[0],
+                posts=posts,
+                pagination=pagination)
+
+        # Blog posts
+        return galatea.uri_aux(uris[0])
 
     if current_uri_str.startswith(archives_base_uri.uri):
         archive_params = current_uri_str.replace(archives_base_uri.uri,

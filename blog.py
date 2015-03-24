@@ -356,6 +356,12 @@ def archives(uri_str):
 
     # TODO: get it from some "blog" attribute?
     blog_base_uri_str = url_for('.home')
+    if g.language == 'ca':
+        blog_base_uri_str = '/ca/noticies/'
+    elif g.language == 'es':
+        blog_base_uri_str = '/es/noticias/'
+    else:
+        blog_base_uri_str = '/en/news/'
     tags_base_uri = website.tags_base_uri
     archives_base_uri = website.archives_base_uri
 

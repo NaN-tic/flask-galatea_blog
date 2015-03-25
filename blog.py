@@ -336,7 +336,14 @@ def home():
         abort(404)
     uri = uris[0]
 
-    posts, pagination = paginated_posts()
+    websites = Website.search([
+        ('id', '=', GALATEA_WEBSITE),
+        ], limit=1)
+    if not websites:
+        abort(404)
+    website, = websites
+
+    posts, pagination = paginated_posts(uri=website.archives_base_uri.uri)
     return render_template('blog.html',
         uri=uri,
         posts=posts,
@@ -354,14 +361,7 @@ def archives(uri_str):
         abort(404)
     website, = websites
 
-    # TODO: get it from some "blog" attribute?
-    blog_base_uri_str = url_for('.home')
-    if g.language == 'ca':
-        blog_base_uri_str = '/ca/noticies/'
-    elif g.language == 'es':
-        blog_base_uri_str = '/es/noticias/'
-    else:
-        blog_base_uri_str = '/en/news/'
+    blog_base_uri_str = website.archives_base_uri.uri + '/'
     tags_base_uri = website.tags_base_uri
     archives_base_uri = website.archives_base_uri
 
@@ -375,7 +375,7 @@ def archives(uri_str):
 
     if uris:
         if current_uri_str.startswith(tags_base_uri.uri):
-            posts, pagination = paginated_posts(tag=uris[0].content)
+            posts, pagination = paginated_posts(current_uri_str, tag=uris[0].content)
             return render_template(uris[0].template.filename,
                 uri=uris[0],
                 posts=posts,
@@ -411,8 +411,8 @@ def archives(uri_str):
         else:
             abort(404)
 
-        posts, pagination = paginated_posts(start_date=start_date,
-            end_date=end_date)
+        posts, pagination = paginated_posts(current_uri_str,
+            start_date=start_date, end_date=end_date)
         return render_template('blog-archive.html',
             title=title,
             posts=posts,
@@ -421,7 +421,7 @@ def archives(uri_str):
         abort(404)
 
 
-def paginated_posts(tag=None, start_date=None, end_date=None, offset=None,
+def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
         limit=None):
     try:
         page = int(request.args.get('page', 1))
@@ -451,5 +451,5 @@ def paginated_posts(tag=None, start_date=None, end_date=None, offset=None,
             ('id', 'DESC'),
             ])
     pagination = Pagination(page=page, total=total, per_page=limit,
-        display_msg=DISPLAY_MSG, bs_version='3')
+        display_msg=DISPLAY_MSG, bs_version='3', href=uri + '?page={0}')
     return posts, pagination

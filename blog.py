@@ -48,26 +48,15 @@ def _visibility():
 @tryton.transaction()
 def home():
     '''Blog home'''
-    # TODO: get it from website conf?
-    with Transaction().set_context(website=GALATEA_WEBSITE):
-        uris = Uri.search([
-                ('slug', 'in', ('noticies', 'noticias', 'news')),
-                ('parent.slug', 'in', ('ca', 'es', 'en')),
-                ('active', '=', True),
-                ('website', '=', GALATEA_WEBSITE),
-                ])
-    if not uris:
-        abort(404)
-    uri = uris[0]
-
     websites = Website.search([
         ('id', '=', GALATEA_WEBSITE),
         ], limit=1)
     if not websites:
         abort(404)
     website, = websites
+    uri = website.archives_base_uri
 
-    posts, pagination = paginated_posts(uri=website.archives_base_uri.uri)
+    posts, pagination = paginated_posts(uri=uri.uri)
     return render_template('blog.html',
         uri=uri,
         posts=posts,

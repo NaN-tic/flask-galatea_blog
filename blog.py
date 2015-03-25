@@ -137,7 +137,7 @@ def archives(uri_str):
 def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
         limit=None):
     try:
-        page = int(request.args.get('page', 1))
+        page = int(request.args.get('p', 1))
     except ValueError:
         page = 1
 
@@ -164,5 +164,5 @@ def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
             ('id', 'DESC'),
             ])
     pagination = Pagination(page=page, total=total, per_page=limit,
-        display_msg=DISPLAY_MSG, bs_version='3', href=uri + '?page={0}')
+        display_msg=DISPLAY_MSG, bs_version='3', href=uri + '?p={0}')
     return posts, pagination

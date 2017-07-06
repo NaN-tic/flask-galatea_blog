@@ -32,7 +32,7 @@ COMMENTS = current_app.config.get('TRYTON_BLOG_COMMENTS', True)
 WHOOSH_MAX_LIMIT = current_app.config.get('WHOOSH_MAX_LIMIT', 500)
 
 POST_FIELD_NAMES = ['name', 'slug', 'description', 'comment', 'total_comments',
-    'metakeywords', 'user', 'user.rec_name', 'post_create_date']
+    'metakeywords', 'user', 'user.rec_name', 'post_published_date']
 BLOG_SCHEMA_PARSE_FIELDS = ['title', 'content']
 
 def _visibility():
@@ -154,13 +154,13 @@ def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
     if tag:
         domain.append(('tags', 'in', [tag.id]))
     if start_date:
-        domain.append(('post_create_date', '>=', start_date))
+        domain.append(('post_published_date', '>=', start_date))
     if end_date:
-        domain.append(('post_create_date', '<', end_date))
+        domain.append(('post_published_date', '<', end_date))
 
     total = Post.search_count(domain)
     posts = Post.search(domain, offset=offset, limit=LIMIT, order=[
-            ('post_create_date', 'DESC'),
+            ('post_published_date', 'DESC'),
             ('id', 'DESC'),
             ])
     pagination = Pagination(page=page, total=total, per_page=limit,

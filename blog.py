@@ -119,7 +119,10 @@ def archives(uri_str):
                 abort(404)
 
             title = '{:0>2}/{}'.format(month, year)
-            start_date = datetime(year, month, 1, 0, 0, 0)
+            try:
+                start_date = datetime(year, month, 1, 0, 0, 0)
+            except OverflowError:
+                abort(404)
             end_date = start_date + relativedelta(months=+1)
         elif len(archive_params) == 1:
             try:

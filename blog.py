@@ -178,6 +178,37 @@ def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
         display_msg=DISPLAY_MSG, bs_version='3', href=uri + '?p={0}')
     return posts, pagination
 
+@blog.route("/<slug>", endpoint="post")
+@tryton.transaction()
+def post(slug):
+    '''Post detaill'''
+    website = Website(GALATEA_WEBSITE)
+
+    posts = Post.search([
+        ('slug', '=', slug),
+        ('active', '=', True),
+        ('visibility', 'in', _visibility()),
+        ('websites', 'in', [GALATEA_WEBSITE]),
+        ], limit=1)
+
+    if not posts:
+        abort(404)
+    post, = posts
+
+    breadcrumbs = [{
+        'slug': url_for('.home'),
+        'name': _('Blog'),
+        }, {
+        'slug': url_for('.post', slug=post.slug),
+        'name': post.name,
+        }]
+
+    return render_template('blog-post.html',
+            website=website,
+            post=post,
+            breadcrumbs=breadcrumbs,
+            )
+
 @blog.route("/search/", methods=["GET"], endpoint="search")
 @tryton.transaction()
 def search():

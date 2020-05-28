@@ -166,8 +166,12 @@ def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
         domain.append(('tags', 'in', [tag.id]))
     if start_date:
         domain.append(('post_published_date', '>=', start_date))
-    if end_date:
-        domain.append(('post_published_date', '<', end_date))
+
+    # Ensure only current posts are visible
+    if not end_date or end_date > datetime.now():
+        end_date = datetime.now()
+
+    domain.append(('post_published_date', '<', end_date))
 
     total = Post.search_count(domain)
     posts = Post.search(domain, offset=offset, limit=LIMIT, order=[

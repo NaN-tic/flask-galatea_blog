@@ -6,7 +6,6 @@ from flask import (Blueprint, render_template, current_app, abort, g,
 from galatea.tryton import tryton
 from flask_paginate import Pagination
 from flask_babel import gettext as _, lazy_gettext
-from flask_mail import Mail, Message
 from trytond.config import config as tryton_config
 from trytond.transaction import Transaction
 from whoosh import index
@@ -338,16 +337,5 @@ def comment():
         c.description = comment
         c.save()
         flash(_('Comment published successfully.'), 'success')
-
-        mail = Mail(current_app)
-
-        mail_to = current_app.config.get('DEFAULT_MAIL_SENDER')
-        subject =  '%s - %s' % (current_app.config.get('TITLE'), _('New comment published'))
-        msg = Message(subject,
-                body = render_template('emails/blog-comment-text.jinja', post=post, comment=comment),
-                html = render_template('emails/blog-comment-html.jinja', post=post, comment=comment),
-                sender = mail_to,
-                recipients = [mail_to])
-        mail.send(msg)
 
     return redirect(post.canonical_uri.uri)

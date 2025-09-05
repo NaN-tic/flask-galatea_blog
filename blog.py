@@ -3,7 +3,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from flask import (Blueprint, render_template, current_app, abort, g,
     request, url_for, session, flash, redirect)
-from galatea.tryton import tryton
+from app_extensions import tryton
 from flask_paginate import Pagination
 from flask_babel import gettext as _, lazy_gettext
 from trytond.config import config as tryton_config
@@ -18,23 +18,8 @@ blog = Blueprint('blog', __name__, template_folder='templates')
 
 DISPLAY_MSG = lazy_gettext('Displaying <b>{start} - {end}</b> of <b>{total}</b>')
 
-Website = tryton.pool.get('galatea.website')
-Post = tryton.pool.get('galatea.blog.post')
-Comment = tryton.pool.get('galatea.blog.comment')
-Uri = tryton.pool.get('galatea.uri')
-User = tryton.pool.get('galatea.user')
-
-GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
-LIMIT = current_app.config.get('TRYTON_PAGINATION_BLOG_LIMIT', 20)
-COMMENTS = current_app.config.get('TRYTON_BLOG_COMMENTS', True)
-WHOOSH_MAX_LIMIT = current_app.config.get('WHOOSH_MAX_LIMIT', 500)
-
 POST_FIELD_NAMES = ['name', 'slug', 'description', 'comment', 'total_comments',
     'metakeywords', 'user', 'user.rec_name', 'post_published_date']
-BLOG_SCHEMA_PARSE_FIELDS = current_app.config.get(
-    'TRYTON_BLOG_SCHEMA_PARSE_FIELDS', ['title', 'content'])
-BLOG_SEARCH_ADD_WILDCARD = current_app.config.get(
-    'TRYTON_BLOG_SEARCH_ADD_WILDCARD', False)
 
 def _visibility():
     visibility = ['public']
@@ -48,6 +33,10 @@ def _visibility():
 @tryton.transaction()
 def home():
     '''Blog home'''
+    Website = tryton.pool.get('galatea.website')
+
+    GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
+
     websites = Website.search([
         ('id', '=', GALATEA_WEBSITE),
         ], limit=1)
@@ -75,6 +64,11 @@ def home():
 @tryton.transaction()
 def archives(uri_str):
     '''Blog Archives'''
+    Website = tryton.pool.get('galatea.website')
+    Uri = tryton.pool.get('galatea.uri')
+
+    GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
+
     websites = Website.search([
         ('id', '=', GALATEA_WEBSITE),
         ], limit=1)
@@ -146,6 +140,11 @@ def archives(uri_str):
 
 def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
         limit=None):
+    Post = tryton.pool.get('galatea.blog.post')
+
+    LIMIT = current_app.config.get('TRYTON_PAGINATION_BLOG_LIMIT', 20)
+    GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
+
     try:
         page = int(request.args.get('p', 1))
     except ValueError:
@@ -181,6 +180,11 @@ def paginated_posts(uri, tag=None, start_date=None, end_date=None, offset=None,
 @tryton.transaction()
 def post(slug):
     '''Post detaill'''
+    Website = tryton.pool.get('galatea.website')
+    Post = tryton.pool.get('galatea.blog.post')
+
+    GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
+
     website = Website(GALATEA_WEBSITE)
 
     posts = Post.search([
@@ -212,6 +216,16 @@ def post(slug):
 @tryton.transaction()
 def search():
     '''Search'''
+    Website = tryton.pool.get('galatea.website')
+    Post = tryton.pool.get('galatea.blog.post')
+
+    GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
+    LIMIT = current_app.config.get('TRYTON_PAGINATION_BLOG_LIMIT', 20)
+    WHOOSH_MAX_LIMIT = current_app.config.get('WHOOSH_MAX_LIMIT', 500)
+    BLOG_SCHEMA_PARSE_FIELDS = current_app.config.get(
+        'TRYTON_BLOG_SCHEMA_PARSE_FIELDS', ['title', 'content'])
+    BLOG_SEARCH_ADD_WILDCARD = current_app.config.get(
+        'TRYTON_BLOG_SEARCH_ADD_WILDCARD', False)
 
     website = Website(GALATEA_WEBSITE)
 
@@ -306,6 +320,12 @@ def search():
 @tryton.transaction()
 def comment():
     '''Add Comment'''
+    Website = tryton.pool.get('galatea.website')
+    Post = tryton.pool.get('galatea.blog.post')
+    Comment = tryton.pool.get('galatea.blog.comment')
+
+    GALATEA_WEBSITE = current_app.config.get('TRYTON_GALATEA_SITE')
+
     website = Website(GALATEA_WEBSITE)
 
     post = request.form.get('post')
